@@ -1,133 +1,153 @@
-import clsx from 'clsx';
 import styles from './ArticleParamsForm.module.scss';
-import { useState, useRef, SyntheticEvent } from 'react';
-import { useClose } from 'src/useClose';
-import {
-	defaultArticleState,
-	fontFamilyOptions,
-	fontSizeOptions,
-	fontColors,
-	backgroundColors,
-	contentWidthArr,
-	OptionType,
-} from 'src/constants/articleProps';
+import clsx from 'clsx';
 import { ArrowButton } from 'src/ui/arrow-button';
 import { Button } from 'src/ui/button';
+import {
+	ArticleStateType,
+	fontFamilyOptions,
+	fontSizeOptions,
+	contentWidthArr,
+	fontColors,
+	backgroundColors,
+	defaultArticleState,
+} from 'src/constants/articleProps';
+import { useState, useEffect, useRef } from 'react';
 import { Text } from 'src/ui/text';
 import { Select } from 'src/ui/select';
 import { RadioGroup } from 'src/ui/radio-group';
 import { Separator } from 'src/ui/separator';
 
-export type MenuState = {
-	fontFamilyOption: OptionType;
-	fontColor: OptionType;
-	backgroundColor: OptionType;
-	contentWidth: OptionType;
-	fontSizeOption: OptionType;
-};
+interface FormProps {
+	currentStyle: ArticleStateType;
+	onSet: (newStyle: ArticleStateType) => void;
+	onClear: () => void;
+}
 
-type ArticleParamsFormProps = {
-	onSubmit: (params: MenuState) => void;
-};
+export const ArticleParamsForm = ({
+	currentStyle,
+	onSet,
+	onClear,
+}: FormProps) => {
+	const [isOpen, setIsOpen] = useState(false);
+	const [formState, setFormState] = useState<ArticleStateType>(currentStyle);
+	const formRef = useRef<HTMLElement | null>(null);
 
-export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
-	const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-	const [menuState, setMenuState] = useState<MenuState>(defaultArticleState);
-	const menuRef = useRef<HTMLElement | null>(null);
+	useEffect(() => {
+		setFormState(currentStyle);
+	}, [currentStyle]);
 
-	const handleMenuToggle = () => {
-		setIsMenuOpen((prev) => !prev);
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleClickOutside = (e: MouseEvent) => {
+			if (formRef.current && !formRef.current.contains(e.target as Node)) {
+				setIsOpen(false);
+			}
+		};
+
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				setIsOpen(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		document.addEventListener('keydown', handleEscape);
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+			document.removeEventListener('keydown', handleEscape);
+		};
+	}, [isOpen]);
+
+	const handleFormSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		onSet(formState);
 	};
 
-	const handleMenuClose = () => {
-		setIsMenuOpen(false);
+	const handleFormClear = (e: React.FormEvent) => {
+		e.preventDefault();
+		setFormState(defaultArticleState);
+		onClear();
 	};
 
-	const handleParamChange = (key: keyof MenuState) => (value: OptionType) => {
-		setMenuState((prevState) => ({
-			...prevState,
-			[key]: value,
-		}));
-	};
+	const handleParamChange =
+		<K extends keyof ArticleStateType>(key: K) =>
+		(value: ArticleStateType[K]) => {
+			setFormState((prevState) => ({
+				...prevState,
+				[key]: value,
+			}));
+		};
 
-	const handleParamReset = () => {
-		setMenuState(defaultArticleState);
-		props.onSubmit(defaultArticleState);
-	};
-
-	const handleFormSubmit = (evt: SyntheticEvent) => {
-		evt.preventDefault();
-		props.onSubmit(menuState);
-	};
-
-	useClose({
-		isOpen: isMenuOpen,
-		onClose: handleMenuClose,
-		rootRef: menuRef,
-	});
-
-	const menuClassName = clsx(styles.container, {
-		[styles.container_open]: isMenuOpen,
+	const formClassNameChange = clsx(styles.container, {
+		[styles.container_open]: isOpen,
 	});
 
 	return (
 		<>
-			<ArrowButton isOpen={isMenuOpen} onClick={handleMenuToggle} />
-			<aside ref={menuRef} className={menuClassName}>
+			<ArrowButton isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
+			<aside ref={formRef} className={formClassNameChange}>
 				<form
 					className={styles.form}
 					onSubmit={handleFormSubmit}
-					onReset={handleParamReset}>
+					onReset={handleFormClear}>
 					<Text
 						as='h2'
 						size={31}
 						weight={800}
+						family='open-sans'
 						fontStyle='normal'
-						uppercase
 						align='left'
-						family='open-sans'>
+						uppercase>
 						Задайте параметры
 					</Text>
+
 					<Select
-						selected={menuState.fontFamilyOption}
-						options={fontFamilyOptions}
+						title='Шрифт'
 						placeholder='Выберите шрифт'
+						selected={formState.fontFamilyOption}
+						options={fontFamilyOptions}
 						onChange={handleParamChange('fontFamilyOption')}
 						onClose={() => {}}
-						title='Шрифт'
 					/>
+
 					<RadioGroup
+						title='Размер шрифта'
 						name='fontSize'
-						selected={menuState.fontSizeOption}
+						selected={formState.fontSizeOption}
 						options={fontSizeOptions}
 						onChange={handleParamChange('fontSizeOption')}
-						title='Размер шрифта'
 					/>
+
 					<Select
-						selected={menuState.fontColor}
-						options={fontColors}
+						title='Цвет шрифта'
 						placeholder='Выберите цвет шрифта'
+						selected={formState.fontColor}
+						options={fontColors}
 						onChange={handleParamChange('fontColor')}
 						onClose={() => {}}
-						title='Цвет шрифта'
 					/>
 					<Separator />
+
 					<Select
-						selected={menuState.backgroundColor}
-						options={backgroundColors}
+						title='Цвет фона'
 						placeholder='Выберите цвет фона'
+						selected={formState.backgroundColor}
+						options={backgroundColors}
 						onChange={handleParamChange('backgroundColor')}
 						onClose={() => {}}
-						title='Цвет фона'
 					/>
+
 					<Select
-						selected={menuState.contentWidth}
-						options={contentWidthArr}
+						title='Ширина контента'
 						placeholder='Выберите ширину контента'
+						selected={formState.contentWidth}
+						options={contentWidthArr}
 						onChange={handleParamChange('contentWidth')}
 						onClose={() => {}}
-						title='Ширина контента'
 					/>
+
 					<div className={styles.bottomContainer}>
 						<Button title='Сбросить' htmlType='reset' type='clear' />
 						<Button title='Применить' htmlType='submit' type='apply' />
