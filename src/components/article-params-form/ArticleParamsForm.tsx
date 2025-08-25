@@ -16,17 +16,16 @@ import { Text } from 'src/ui/text';
 import { Select } from 'src/ui/select';
 import { RadioGroup } from 'src/ui/radio-group';
 import { Separator } from 'src/ui/separator';
+import { useClickOutside } from 'src/hooks/useClickOutside';
 
 interface FormProps {
 	currentStyle: ArticleStateType;
 	onSet: (newStyle: ArticleStateType) => void;
-	onClear: () => void;
 }
 
 export const ArticleParamsForm = ({
 	currentStyle,
-	onSet,
-	onClear,
+	onSet
 }: FormProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [formState, setFormState] = useState<ArticleStateType>(currentStyle);
@@ -36,30 +35,8 @@ export const ArticleParamsForm = ({
 		setFormState(currentStyle);
 	}, [currentStyle]);
 
-	useEffect(() => {
-		if (!isOpen) return;
-
-		const handleClickOutside = (e: MouseEvent) => {
-			if (formRef.current && !formRef.current.contains(e.target as Node)) {
-				setIsOpen(false);
-			}
-		};
-
-		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				setIsOpen(false);
-			}
-		};
-
-		document.addEventListener('mousedown', handleClickOutside);
-		document.addEventListener('keydown', handleEscape);
-
-		return () => {
-			document.removeEventListener('mousedown', handleClickOutside);
-			document.removeEventListener('keydown', handleEscape);
-		};
-	}, [isOpen]);
-
+	useClickOutside(formRef, () => setIsOpen(false), isOpen);
+	
 	const handleFormSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		onSet(formState);
@@ -67,8 +44,7 @@ export const ArticleParamsForm = ({
 
 	const handleFormClear = (e: React.FormEvent) => {
 		e.preventDefault();
-		setFormState(defaultArticleState);
-		onClear();
+		onSet(defaultArticleState);
 	};
 
 	const handleParamChange =
